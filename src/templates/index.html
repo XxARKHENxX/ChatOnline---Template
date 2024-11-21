@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bate-papo Aleatório</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+            margin: 0;
+        }
+        #chat {
+            flex: 1;
+            height: 100%;
+            overflow-y: scroll;
+            border: 1px solid #ddd;
+            padding: 10px;
+        }
+        #users-panel {
+            width: 200px;
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-left: 1px solid #ddd;
+            height: 100%;
+        }
+        #users-panel ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        #users-panel li {
+            padding: 5px;
+            border-bottom: 1px solid #ddd;
+        }
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="users-panel">
+        <h3>Usuários Conectados</h3>
+        <ul id="user-list"></ul>
+    </div>
+    <div id="chat">
+        <div id="messages"></div>
+    </div>
+    <div>
+        <input type="text" id="username" placeholder="Digite seu nome..." />
+        <input type="text" id="message" placeholder="Digite uma mensagem..." />
+        <button onclick="sendMessage()">Enviar</button>
+        <button onclick="nextUser()">Trocar de Usuário</button>
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.1/socket.io.min.js"></script>
+    <script>
+        const socket = io.connect('http://localhost:5000');
+        
+        // Variável para armazenar o nome de usuário
+        let username = 'Anonimo';  // Nome padrão "Anonimo"
+
+        // Função para enviar mensagem
+        function sendMessage() {
+            const message = document.getElementById('message').value;
+            if (message && username) {
+                socket.send({
+                    username: username,
+                    message: message
+                });
+                document.getElementById('message').value = ''; // Limpar o campo da mensagem
+            }
+        }
+
+        // Função para trocar de usuário
+        function nextUser() {
+            socket.emit('next_user');
+        }
+
+        // Função para obter o nome do usuário
+        function setUsername() {
+            const inputUsername = document.getElementById('username').value;
+            username = inputUsername || 'Anonimo';  // Se não houver nome, usa "Anonimo"
+            socket.emit('connect', { username: username });
+        }
+
+        // Escutando a mensagem enviada
+        socket.on('message', function(data) {
+            const chat = document.getElementById('messages');
+            const msg = `<strong>${data.username}:</strong> ${data.message}`;
+            chat.innerHTML += `<div>${msg}</div>`;
+            chat.scrollTop = chat.scrollHeight; // Rolar para a última mensagem
+        });
+
+        // Escutando a lista de usuários conectados
+        socket.on('user_list', function(data) {
+            const userList = document.getElementById('user-list');
+            userList.innerHTML = '';  // Limpar a lista existente
+            data.users.forEach(user => {
+                const li = document.createElement('li');
+                li.textContent = user;
+                userList.appendChild(li);
+            });
+        });
+
+        // Definir o nome do usuário ao entrar
+        document.getElementById('username').addEventListener('change', setUsername);
+    </script>
+</body>
+</html>
